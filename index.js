@@ -22,7 +22,7 @@ const pdfMap = {
   cost_accounting: "cost-accounting-lastminutepdf-premium-rapid-revision-guide.pdf",
   human_resource_management: "hrm-lastminutepdf-premium-rapid-revision-guide.pdf",
   marketing_management: "marketing-management-lastminutepdf-premium-rapid-revision-guide.pdf",
-  principles_of_management: "principles-of-management-lastminutepdf-premium-rapid-revision-guide.pdf"
+  principles_of_management: "principles-of-management-lastminutepdf-premium-rapid-revision-guide.pdf",
   financial_accounting: "financial-accounting-premium-rapid-revision-guide.pdf",
 };
 

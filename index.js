@@ -16,14 +16,13 @@ const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
 // Map subject to PDF file
 const pdfMap = {
-  financial_accounting: "Financial_Accounting_Premium_LastMinutePDF.pdf",
-  business_mathematics: "Business_Mathematics.pdf",
-  business_statistics: "Business_Statistics.pdf",
-  principles_of_management: "Principles_of_Management.pdf",
-  business_economics: "Business_Economics.pdf",
-  marketing_management: "Marketing_Management.pdf",
-  human_resource_management: "Human_Resource_Management.pdf",
-  cost_accounting: "Cost_Accounting.pdf"
+  business_economics: "business-economics-lastminutepdf-premium-rapid-revision-guide.pdf",
+  business_mathematics: "business-mathematics-lastminutepdf-premium-rapid-revision-guide.pdf",
+  business_statistics: "business-statistics-premium-rapid-revision-guide.pdf",
+  cost_accounting: "cost-accounting-lastminutepdf-premium-rapid-revision-guide.pdf",
+  human_resource_management: "hrm-lastminutepdf-premium-rapid-revision-guide.pdf",
+  marketing_management: "marketing-management-lastminutepdf-premium-rapid-revision-guide.pdf",
+  principles_of_management: "principles-of-management-lastminutepdf-premium-rapid-revision-guide.pdf"
 };
 
 app.post("/webhook", async (req, res) => {

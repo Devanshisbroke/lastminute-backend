@@ -4,11 +4,15 @@ import { Resend } from "resend";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
+import cors from "cors";
 
 const app = express();
 
+app.use(cors());
+app.use(express.json());
+app.use("/webhook", bodyParser.raw({ type: "*/*" }));
+
 // Razorpay sends raw body for signature verification
-app.use(bodyParser.raw({ type: "*/*" }));
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 

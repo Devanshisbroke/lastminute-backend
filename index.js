@@ -10,28 +10,35 @@ import Razorpay from "razorpay";
 const app = express();
 
 // ======================
-// MIDDLEWARE
+// CORS
 // ======================
 app.use(cors());
-app.use(express.json()); // for normal routes
 
 // ======================
-// RAZORPAY INIT
+// JSON parser ONLY for non-webhook routes
+// ======================
+app.use((req, res, next) => {
+  if (req.originalUrl === "/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
+// ======================
+// INIT SERVICES
 // ======================
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ======================
-// RESEND INIT
-// ======================
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
 // ======================
-// PDF MAP
+// SUBJECT → PDF MAP
 // ======================
 const pdfMap = {
   business_economics: "business-economics-lastminutepdf-premium-rapid-revision-guide.pdf",
@@ -92,6 +99,7 @@ app.post(
         .digest("hex");
 
       if (signature !== expectedSignature) {
+        console.log("Invalid signature");
         return res.status(400).send("Invalid signature");
       }
 
@@ -147,7 +155,7 @@ app.post(
 );
 
 // ======================
-// HOME ROUTE
+// HEALTH CHECK
 // ======================
 app.get("/", (req, res) => {
   res.send("Backend Running 🚀");

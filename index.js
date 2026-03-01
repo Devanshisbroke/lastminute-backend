@@ -9,22 +9,30 @@ import Razorpay from "razorpay";
 
 const app = express();
 
+// ======================
+// MIDDLEWARE
+// ======================
 app.use(cors());
-app.use(express.json());
-app.use("/webhook", bodyParser.raw({ type: "*/*" }));
+app.use(express.json()); // for normal routes
 
-// Initialize Razorpay
+// ======================
+// RAZORPAY INIT
+// ======================
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// Initialize Resend
+// ======================
+// RESEND INIT
+// ======================
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-// Map subject to PDF file
+// ======================
+// PDF MAP
+// ======================
 const pdfMap = {
   business_economics: "business-economics-lastminutepdf-premium-rapid-revision-guide.pdf",
   business_mathematics: "business-mathematics-lastminutepdf-premium-rapid-revision-guide.pdf",
@@ -36,11 +44,9 @@ const pdfMap = {
   financial_accounting: "financial-accounting-premium-rapid-revision-guide.pdf",
 };
 
-
-
-// ==============================
-// CREATE PAYMENT LINK ROUTE
-// ==============================
+// ======================
+// CREATE PAYMENT LINK
+// ======================
 app.post("/create-payment-link", async (req, res) => {
   try {
     const { subject, email } = req.body;
@@ -70,86 +76,84 @@ app.post("/create-payment-link", async (req, res) => {
   }
 });
 
+// ======================
+// WEBHOOK (RAW BODY)
+// ======================
+app.post(
+  "/webhook",
+  bodyParser.raw({ type: "*/*" }),
+  async (req, res) => {
+    try {
+      const signature = req.headers["x-razorpay-signature"];
 
+      const expectedSignature = crypto
+        .createHmac("sha256", WEBHOOK_SECRET)
+        .update(req.body) // RAW BUFFER
+        .digest("hex");
 
-// ==============================
-// WEBHOOK ROUTE
-// ==============================
-app.post("/webhook", async (req, res) => {
-  try {
-    const signature = req.headers["x-razorpay-signature"];
-
-    const expectedSignature = crypto
-      .createHmac("sha256", WEBHOOK_SECRET)
-      .update(req.body)
-      .digest("hex");
-
-    if (signature !== expectedSignature) {
-      return res.status(400).send("Invalid signature");
-    }
-
-    const payload = JSON.parse(req.body.toString());
-
-    if (payload.event === "payment.captured") {
-      const payment = payload.payload.payment.entity;
-
-      const email =
-        payment.email ||
-        payment.customer_details?.email ||
-        null;
-
-      console.log("Extracted email:", email);
-
-      if (!email) {
-        return res.status(400).send("Email not found");
+      if (signature !== expectedSignature) {
+        return res.status(400).send("Invalid signature");
       }
 
-      const subjectKey = payment.notes?.subject;
-      const pdfFile = pdfMap[subjectKey];
+      const payload = JSON.parse(req.body.toString());
 
-      if (!pdfFile) {
-        return res.status(400).send("Invalid subject");
+      if (payload.event === "payment.captured") {
+        const payment = payload.payload.payment.entity;
+
+        const email =
+          payment.email ||
+          payment.customer_details?.email ||
+          null;
+
+        console.log("Extracted email:", email);
+
+        if (!email) {
+          return res.status(400).send("Email not found");
+        }
+
+        const subjectKey = payment.notes?.subject;
+        const pdfFile = pdfMap[subjectKey];
+
+        if (!pdfFile) {
+          return res.status(400).send("Invalid subject");
+        }
+
+        const filePath = path.join("./pdfs", pdfFile);
+        const fileBuffer = fs.readFileSync(filePath);
+
+        await resend.emails.send({
+          from: "onboarding@resend.dev",
+          to: email,
+          subject: "Your LastMinutePDF Notes",
+          text: "Thank you for your purchase. Please find your notes attached.",
+          attachments: [
+            {
+              filename: pdfFile,
+              content: fileBuffer,
+            },
+          ],
+        });
+
+        console.log("Email sent to:", email);
       }
 
-      const filePath = path.join("./pdfs", pdfFile);
-      const fileBuffer = fs.readFileSync(filePath);
+      res.status(200).send("OK");
 
-      await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: email,
-        subject: "Your LastMinutePDF Notes",
-        text: "Thank you for your purchase. Please find your notes attached.",
-        attachments: [
-          {
-            filename: pdfFile,
-            content: fileBuffer,
-          },
-        ],
-      });
-
-      console.log("Email sent to:", email);
+    } catch (error) {
+      console.error("Webhook error:", error);
+      res.status(500).send("Error");
     }
-
-    res.status(200).send("OK");
-
-  } catch (error) {
-    console.error("Webhook error:", error);
-    res.status(500).send("Error");
   }
-});
+);
 
-
-
-// ==============================
+// ======================
 // HOME ROUTE
-// ==============================
+// ======================
 app.get("/", (req, res) => {
   res.send("Backend Running 🚀");
 });
 
-
-
-// ==============================
+// ======================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

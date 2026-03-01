@@ -23,6 +23,7 @@ const pdfMap = {
   human_resource_management: "hrm-lastminutepdf-premium-rapid-revision-guide.pdf",
   marketing_management: "marketing-management-lastminutepdf-premium-rapid-revision-guide.pdf",
   principles_of_management: "principles-of-management-lastminutepdf-premium-rapid-revision-guide.pdf"
+  financial_accounting: "financial-accounting-premium-rapid-revision-guide.pdf",
 };
 
 app.post("/webhook", async (req, res) => {

@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
 import cors from "cors";
+import Razorpay from "razorpay";
 
 const app = express();
 
@@ -12,8 +13,13 @@ app.use(cors());
 app.use(express.json());
 app.use("/webhook", bodyParser.raw({ type: "*/*" }));
 
-// Razorpay sends raw body for signature verification
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
+// Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -30,6 +36,45 @@ const pdfMap = {
   financial_accounting: "financial-accounting-premium-rapid-revision-guide.pdf",
 };
 
+
+
+// ==============================
+// CREATE PAYMENT LINK ROUTE
+// ==============================
+app.post("/create-payment-link", async (req, res) => {
+  try {
+    const { subject, email } = req.body;
+
+    if (!pdfMap[subject]) {
+      return res.status(400).json({ error: "Invalid subject" });
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: "Email required" });
+    }
+
+    const paymentLink = await razorpay.paymentLink.create({
+      amount: 2900, // ₹29 in paise
+      currency: "INR",
+      description: `LastMinutePDF - ${subject}`,
+      customer: { email },
+      notify: { email: true },
+      notes: { subject, email }
+    });
+
+    res.json({ url: paymentLink.short_url });
+
+  } catch (error) {
+    console.error("Payment link error:", error);
+    res.status(500).json({ error: "Failed to create payment link" });
+  }
+});
+
+
+
+// ==============================
+// WEBHOOK ROUTE
+// ==============================
 app.post("/webhook", async (req, res) => {
   try {
     const signature = req.headers["x-razorpay-signature"];
@@ -49,18 +94,17 @@ app.post("/webhook", async (req, res) => {
       const payment = payload.payload.payment.entity;
 
       const email =
-  payment.email ||
-  payment.customer_details?.email ||
-  null;
+        payment.email ||
+        payment.customer_details?.email ||
+        null;
 
-console.log("Extracted email:", email);
+      console.log("Extracted email:", email);
 
       if (!email) {
-  console.log("No email found in webhook payload");
-  return res.status(400).send("Email not found");
-}
-      const subjectKey = payment.notes?.subject;
+        return res.status(400).send("Email not found");
+      }
 
+      const subjectKey = payment.notes?.subject;
       const pdfFile = pdfMap[subjectKey];
 
       if (!pdfFile) {
@@ -78,25 +122,34 @@ console.log("Extracted email:", email);
         attachments: [
           {
             filename: pdfFile,
-            content: fileBuffer
-          }
-        ]
+            content: fileBuffer,
+          },
+        ],
       });
 
       console.log("Email sent to:", email);
     }
 
     res.status(200).send("OK");
+
   } catch (error) {
-    console.error(error);
+    console.error("Webhook error:", error);
     res.status(500).send("Error");
   }
 });
 
+
+
+// ==============================
+// HOME ROUTE
+// ==============================
 app.get("/", (req, res) => {
-  res.send("Backend Running");
+  res.send("Backend Running 🚀");
 });
 
+
+
+// ==============================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

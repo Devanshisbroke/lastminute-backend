@@ -43,7 +43,17 @@ app.post("/webhook", async (req, res) => {
     if (payload.event === "payment.captured") {
       const payment = payload.payload.payment.entity;
 
-      const email = payment.email;
+      const email =
+  payment.email ||
+  payment.customer_details?.email ||
+  null;
+
+console.log("Extracted email:", email);
+
+      if (!email) {
+  console.log("No email found in webhook payload");
+  return res.status(400).send("Email not found");
+}
       const subjectKey = payment.notes?.subject;
 
       const pdfFile = pdfMap[subjectKey];

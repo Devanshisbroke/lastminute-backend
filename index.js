@@ -7,9 +7,7 @@ import path from "path";
 import cors from "cors";
 import Razorpay from "razorpay";
 
-
 const processedPayments = new Set();
-
 const app = express();
 
 // ======================
@@ -37,7 +35,6 @@ const razorpay = new Razorpay({
 });
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
 // ======================
@@ -70,7 +67,7 @@ app.post("/create-payment-link", async (req, res) => {
     }
 
     const paymentLink = await razorpay.paymentLink.create({
-      amount: 2900, // ₹29 in paise
+      amount: 2900,
       currency: "INR",
       description: `LastMinutePDF - ${subject}`,
       customer: { email },
@@ -78,11 +75,11 @@ app.post("/create-payment-link", async (req, res) => {
       notes: { subject, email }
     });
 
-    res.json({ url: paymentLink.short_url });
+    return res.json({ url: paymentLink.short_url });
 
   } catch (error) {
     console.error("Payment link error:", error);
-    res.status(500).json({ error: "Failed to create payment link" });
+    return res.status(500).json({ error: "Failed to create payment link" });
   }
 });
 
@@ -98,7 +95,7 @@ app.post(
 
       const expectedSignature = crypto
         .createHmac("sha256", WEBHOOK_SECRET)
-        .update(req.body) // RAW BUFFER
+        .update(req.body)
         .digest("hex");
 
       if (signature !== expectedSignature) {
@@ -108,57 +105,60 @@ app.post(
 
       const payload = JSON.parse(req.body.toString());
 
-      if (payload.event === "payment.captured") {
-  const payment = payload.payload.payment.entity;
+      if (payload.event !== "payment.captured") {
+        return res.status(200).send("Event ignored");
+      }
 
-  if (processedPayments.has(payment.id)) {
-    console.log("Duplicate webhook ignored:", payment.id);
-    return res.status(200).send("Already processed");
-  }
+      const payment = payload.payload.payment.entity;
 
-  processedPayments.add(payment.id);
+      if (processedPayments.has(payment.id)) {
+        console.log("Duplicate webhook ignored:", payment.id);
+        return res.status(200).send("Already processed");
+      }
 
-        const email =
-          payment.email ||
-          payment.customer_details?.email ||
-          null;
+      processedPayments.add(payment.id);
 
-        console.log("Extracted email:", email);
+      const email =
+        payment.email ||
+        payment.customer_details?.email ||
+        null;
 
-        if (!email) {
-          return res.status(400).send("Email not found");
-        }
+      console.log("Extracted email:", email);
 
-        const subjectKey = payment.notes?.subject;
-        const pdfFile = pdfMap[subjectKey];
+      if (!email) {
+        return res.status(400).send("Email not found");
+      }
 
-        if (!pdfFile) {
-          return res.status(400).send("Invalid subject");
-        }
+      const subjectKey = payment.notes?.subject;
+      const pdfFile = pdfMap[subjectKey];
 
-        const filePath = path.join("./pdfs", pdfFile);
-        const fileBuffer = fs.readFileSync(filePath);
+      if (!pdfFile) {
+        return res.status(400).send("Invalid subject");
+      }
 
-     const response = await resend.emails.send({
-  from: "onboarding@resend.dev",
-  to: email,
-  subject: "Your LastMinutePDF Notes",
-  text: "Thank you for your purchase. Please find your notes attached.",
-  attachments: [
-    {
-      filename: pdfFile,
-      content: fileBuffer,
-    },
-  ],
-});
+      const filePath = path.join("./pdfs", pdfFile);
+      const fileBuffer = fs.readFileSync(filePath);
 
-console.log("Resend response:", response);
+      const response = await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: `Your ${subjectKey.replace(/_/g, " ")} Notes`,
+        text: "Thank you for your purchase. Please find your notes attached.",
+        attachments: [
+          {
+            filename: pdfFile,
+            content: fileBuffer,
+          },
+        ],
+      });
 
-      res.status(200).send("OK");
+      console.log("Resend response:", response);
+
+      return res.status(200).send("OK");
 
     } catch (error) {
       console.error("Webhook error:", error);
-      res.status(500).send("Error");
+      return res.status(500).send("Error");
     }
   }
 );

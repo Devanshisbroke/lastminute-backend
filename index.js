@@ -140,7 +140,7 @@ app.post(
       const fileBuffer = fs.readFileSync(filePath);
 
       const response = await resend.emails.send({
-        from: "onboarding@resend.dev",
+        from: "notes@lastminutenotes.in",
         to: email,
         subject: `Your ${subjectKey.replace(/_/g, " ")} Notes`,
         text: "Thank you for your purchase. Please find your notes attached.",

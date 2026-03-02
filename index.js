@@ -139,21 +139,20 @@ app.post(
         const filePath = path.join("./pdfs", pdfFile);
         const fileBuffer = fs.readFileSync(filePath);
 
-        await resend.emails.send({
-          from: "onboarding@resend.dev",
-          to: email,
-          subject: "Your LastMinutePDF Notes",
-          text: "Thank you for your purchase. Please find your notes attached.",
-          attachments: [
-            {
-              filename: pdfFile,
-              content: fileBuffer,
-            },
-          ],
-        });
+     const response = await resend.emails.send({
+  from: "onboarding@resend.dev",
+  to: email,
+  subject: "Your LastMinutePDF Notes",
+  text: "Thank you for your purchase. Please find your notes attached.",
+  attachments: [
+    {
+      filename: pdfFile,
+      content: fileBuffer,
+    },
+  ],
+});
 
-        console.log("Email sent to:", email);
-      }
+console.log("Resend response:", response);
 
       res.status(200).send("OK");
 

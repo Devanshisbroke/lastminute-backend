@@ -7,6 +7,9 @@ import path from "path";
 import cors from "cors";
 import Razorpay from "razorpay";
 
+
+const processedPayments = new Set();
+
 const app = express();
 
 // ======================
@@ -106,7 +109,14 @@ app.post(
       const payload = JSON.parse(req.body.toString());
 
       if (payload.event === "payment.captured") {
-        const payment = payload.payload.payment.entity;
+  const payment = payload.payload.payment.entity;
+
+  if (processedPayments.has(payment.id)) {
+    console.log("Duplicate webhook ignored:", payment.id);
+    return res.status(200).send("Already processed");
+  }
+
+  processedPayments.add(payment.id);
 
         const email =
           payment.email ||

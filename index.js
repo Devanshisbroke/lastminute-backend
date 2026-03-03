@@ -66,14 +66,16 @@ app.post("/create-payment-link", async (req, res) => {
       return res.status(400).json({ error: "Email required" });
     }
 
-    const paymentLink = await razorpay.paymentLink.create({
-      amount: 2900,
-      currency: "INR",
-      description: `LastMinutePDF - ${subject}`,
-      customer: { email },
-      notify: { email: true },
-      notes: { subject, email }
-    });
+   const paymentLink = await razorpay.paymentLink.create({
+  amount: 2900,
+  currency: "INR",
+  description: `LastMinutePDF - ${subject}`,
+  customer: { email },
+  notify: { email: true },
+  notes: { subject, email },
+  callback_url: "https://lastminutenotes.in/payment-status",
+  callback_method: "get"
+});
 
     return res.json({ url: paymentLink.short_url });
 

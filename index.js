@@ -165,7 +165,7 @@ app.post(
         return res.status(400).send("Invalid subject");
       }
 
-      const filePath = path.join("./pdfs", pdfFile);
+      const filePath = path.resolve("pdfs", pdfFile);
       const fileBuffer = fs.readFileSync(filePath);
 
       const response = await resend.emails.send({

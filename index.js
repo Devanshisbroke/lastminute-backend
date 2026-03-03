@@ -85,6 +85,33 @@ app.post("/create-payment-link", async (req, res) => {
   }
 });
 
+
+
+// ======================
+// VERIFY PAYMENT  ← PUT IT HERE
+// ======================
+app.post("/verify-payment", async (req, res) => {
+  try {
+    const { payment_id } = req.body;
+
+    if (!payment_id) {
+      return res.status(400).json({ success: false });
+    }
+
+    const payment = await razorpay.payments.fetch(payment_id);
+
+    if (payment.status === "captured") {
+      return res.json({ success: true });
+    } else {
+      return res.json({ success: false });
+    }
+
+  } catch (error) {
+    console.error("Verification error:", error);
+    res.status(500).json({ success: false });
+  }
+
+  
 // ======================
 // WEBHOOK (RAW BODY)
 // ======================

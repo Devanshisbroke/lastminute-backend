@@ -88,7 +88,7 @@ app.post("/create-payment-link", async (req, res) => {
 
 
 // ======================
-// VERIFY PAYMENT  ← PUT IT HERE
+// VERIFY PAYMENT
 // ======================
 app.post("/verify-payment", async (req, res) => {
   try {
@@ -108,9 +108,9 @@ app.post("/verify-payment", async (req, res) => {
 
   } catch (error) {
     console.error("Verification error:", error);
-    res.status(500).json({ success: false });
+    return res.status(500).json({ success: false });
   }
-
+});
   
 // ======================
 // WEBHOOK (RAW BODY)
